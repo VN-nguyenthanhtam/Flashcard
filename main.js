@@ -2,21 +2,22 @@
 const form = document.getElementById('flashcard-form');
 const cardFrontEl = document.getElementById('card-front');
 const cardBackEl = document.getElementById('card-back');
-const cardFrontP = cardFrontEl.querySelector('p');
-const cardBackP = cardBackEl.querySelector('p');
+const cardFrontP = cardFrontEl.querySelector('p'); // Target the paragraph inside
+const cardBackP = cardBackEl.querySelector('p');  // Target the paragraph inside
 const cardContainer = document.getElementById('flashcard');
 const cardCounter = document.getElementById('card-counter');
 
 const prevButton = document.getElementById('prev-button');
 const flipButton = document.getElementById('flip-button');
 const nextButton = document.getElementById('next-button');
+// Add Start Quiz Button selector (assuming it exists in your final HTML)
 const startQuizButton = document.getElementById('start-quiz-button');
 
 // --- Quiz Elements ---
 const interactiveArea = document.getElementById('interactive-area');
 const flashcardSection = document.getElementById('flashcard-section');
 const quizSection = document.getElementById('quiz-section');
-const quizQuestionEl = document.getElementById('quiz-question');
+const quizQuestionEl = document.getElementById('quiz-question'); // This is a <p> tag
 const quizOptionsEl = document.getElementById('quiz-options');
 const quizFeedbackEl = document.getElementById('quiz-feedback');
 const prevQuizButton = document.getElementById('prev-quiz-button');
@@ -28,26 +29,23 @@ let currentCardIndex = -1;
 let currentQuizQuestionIndex = -1;
 let quizIndices = [];
 let correctlyAnsweredInQuiz = {};
-let isQuizActive = false;
+let isQuizActive = false; // Flag to track if quiz mode is active
 
 // Key for localStorage
-const FLASHCARD_STORAGE_KEY = 'myFlashcardsAppData_v1_katex'; // Changed key for KaTeX version
+const FLASHCARD_STORAGE_KEY = 'myFlashcardsAppData_v1_katex_rebuilt'; // Use a distinct key
 
 // --- Initial Data (using LaTeX syntax) ---
 const initialFlashcards = [
     {
-        // Question includes LaTeX for f(x)=e^x part
         question: "Nguyên hàm của hàm số $f(x) = e^x$ là:",
-        // Answers are LaTeX strings. Note the double backslashes \\ for \
         answers: [
-            "$\\frac{e^{x+1}}{x+1} + C$", // LaTeX for A
-            "$e^x + C$",             // LaTeX for B (Correct)
-            "$\\frac{e^x}{x} + C$",         // LaTeX for C
-            "$x \\cdot e^{x-1} + C$"      // LaTeX for D (using \\cdot for multiplication dot)
+            "$\\frac{e^{x+1}}{x+1} + C$",
+            "$e^x + C$",
+            "$\\frac{e^x}{x} + C$",
+            "$x \\cdot e^{x-1} + C$"
         ],
-        correctAnswerIndex: 1 // Index 1 corresponds to the second answer (B)
+        correctAnswerIndex: 1
     }
-    // Add more default flashcards here if needed
 ];
 
 // --- Helper: Shuffle array ---
@@ -73,78 +71,43 @@ function loadFlashcards() {
     if (storedData) {
         try {
             const parsedData = JSON.parse(storedData);
-            if (Array.isArray(parsedData)) {
-                // Basic validation: check if items look like flashcards
-                if (parsedData.every(item => item && typeof item.question === 'string' && Array.isArray(item.answers) && typeof item.correctAnswerIndex === 'number')) {
-                     flashcards = parsedData;
-                     console.log('Flashcards loaded from localStorage:', flashcards.length);
-                } else {
-                     console.warn('Stored data format is invalid. Using initial data.');
-                     flashcards = [...initialFlashcards]; // Use copy of initial data
-                }
+            if (Array.isArray(parsedData) && parsedData.every(item => item && typeof item.question === 'string' && Array.isArray(item.answers) && typeof item.correctAnswerIndex === 'number')) {
+                 flashcards = parsedData;
+                 console.log('Flashcards loaded from localStorage:', flashcards.length);
             } else {
-                console.warn('Stored data is not an array. Using initial data.');
-                flashcards = [...initialFlashcards];
+                 console.warn('Stored data format invalid. Using initial data.');
+                 flashcards = [...initialFlashcards];
             }
         } catch (error) {
             console.error('Error parsing flashcards from localStorage:', error);
-            flashcards = [...initialFlashcards]; // Use initial data on parse error
+            flashcards = [...initialFlashcards];
         }
     } else {
         console.log('No data in localStorage. Using initial data.');
-        flashcards = [...initialFlashcards]; // Use copy of initial data
+        flashcards = [...initialFlashcards];
     }
-
-    // Set initial card index after loading
     currentCardIndex = flashcards.length > 0 ? 0 : -1;
 }
 
 // --- KaTeX Rendering Helper ---
-/**
- * Renders a LaTeX string into a target DOM element using KaTeX.
- * @param {string} latexString The LaTeX string to render.
- * @param {HTMLElement} targetElement The DOM element to render into.
- * @param {boolean} [isDisplayMode=false] Whether to use display mode (block) or inline mode.
- */
 function renderMath(latexString, targetElement, isDisplayMode = false) {
     if (typeof katex === 'undefined') {
         console.error("KaTeX library is not loaded!");
-        targetElement.textContent = latexString; // Fallback to raw text
-        return;
+        targetElement.textContent = latexString; return;
     }
     try {
-        katex.render(latexString, targetElement, {
-            throwOnError: false, // Don't halt execution on minor errors
-            displayMode: isDisplayMode
-        });
+        katex.render(latexString, targetElement, { throwOnError: false, displayMode: isDisplayMode });
     } catch (e) {
-        console.error("KaTeX rendering error:", e);
-        targetElement.textContent = latexString; // Fallback to raw text on error
+        console.error("KaTeX rendering error:", e); targetElement.textContent = latexString;
     }
 }
 
-/**
- * Renders a LaTeX string to an HTML string using KaTeX.
- * @param {string} latexString The LaTeX string to render.
- * @param {boolean} [isDisplayMode=false] Whether to use display mode or inline mode.
- * @returns {string} The rendered HTML string or the original text on error.
- */
 function renderMathToString(latexString, isDisplayMode = false) {
-     if (typeof katex === 'undefined') {
-        console.error("KaTeX library is not loaded!");
-        return latexString; // Fallback
-    }
+     if (typeof katex === 'undefined') { console.error("KaTeX library is not loaded!"); return latexString; }
     try {
-       return katex.renderToString(latexString, {
-            throwOnError: false,
-            displayMode: isDisplayMode
-        });
-    } catch (e) {
-        console.error("KaTeX rendering error to string:", e);
-        return latexString; // Fallback
-    }
+       return katex.renderToString(latexString, { throwOnError: false, displayMode: isDisplayMode });
+    } catch (e) { console.error("KaTeX rendering error to string:", e); return latexString; }
 }
-
 
 // --- Form Submission ---
 form.addEventListener('submit', function(event) {
@@ -152,91 +115,83 @@ form.addEventListener('submit', function(event) {
 
     const questionInput = document.getElementById('question');
     const answerInputs = [
-        document.getElementById('answer1'),
-        document.getElementById('answer2'),
-        document.getElementById('answer3'),
-        document.getElementById('answer4')
+        document.getElementById('answer1'), document.getElementById('answer2'),
+        document.getElementById('answer3'), document.getElementById('answer4')
     ];
-    // IMPORTANT: Get values directly, assume they might contain LaTeX
-    const question = questionInput.value; // No trim, preserve potential LaTeX spacing
-    const answers = answerInputs.map(input => input.value); // No trim
+    const question = questionInput.value; // Get raw value for potential LaTeX
+    const answers = answerInputs.map(input => input.value); // Get raw values
 
     const correctAnswerInput = document.querySelector('input[name="correct_answer"]:checked');
 
-    // Basic validation (non-empty)
-    if (!question.trim()) {
-         alert('Please enter the question.');
-         questionInput.focus();
-         return;
-    }
-     if (answers.some(ans => !ans.trim())) {
-         alert('Please fill in all four answers.');
-         const firstEmpty = answerInputs.find(input => !input.value.trim());
-         if (firstEmpty) firstEmpty.focus();
-         return;
-     }
-    if (!correctAnswerInput) {
-        alert('Please select the correct answer.');
+    // Basic validation
+    if (!question.trim()) { alert('Please enter the question.'); questionInput.focus(); return; }
+    if (answers.some(ans => !ans.trim())) {
+        alert('Please fill in all four answers.');
+        const firstEmpty = answerInputs.find(input => !input.value.trim());
+        if (firstEmpty) firstEmpty.focus();
         return;
-    }
+     }
+    if (!correctAnswerInput) { alert('Please select the correct answer.'); return; }
 
     const correctAnswerIndex = parseInt(correctAnswerInput.value, 10) - 1;
 
     const flashcardData = {
-        question: question, // Store raw input (potentially LaTeX)
-        answers: answers,   // Store raw input (potentially LaTeX)
+        question: question, // Store raw text (might be LaTeX)
+        answers: answers,   // Store raw text
         correctAnswerIndex: correctAnswerIndex
     };
 
     flashcards.push(flashcardData);
-    saveFlashcardsToStorage(); // Save immediately
+    saveFlashcardsToStorage(); // <<< SAVE TO LOCALSTORAGE
+    console.log('Flashcard Created:', flashcardData);
 
-    currentCardIndex = flashcards.length - 1;
-    showCard(currentCardIndex); // Update display
-    updateStartQuizButtonState();
+    currentCardIndex = flashcards.length - 1; // Go to the new card
+    showCard(currentCardIndex); // Update viewer display
+    updateStartQuizButtonState(); // Enable quiz button if it was the first card
+
+    // --- REMOVED: Don't automatically start quiz ---
+    // startQuiz();
 
     form.reset();
-    questionInput.focus();
+    questionInput.focus(); // Focus back on question input
 });
 
 // --- Flashcard Viewer Logic ---
 function showCard(index) {
-    // Clear previous KaTeX content to avoid artifacts if elements are reused
+    // Clear previous KaTeX rendering
     cardFrontP.innerHTML = '';
     cardBackP.innerHTML = '';
 
     if (flashcards.length === 0) {
-        cardFrontP.textContent = 'Create a flashcard to start!'; // No KaTeX needed here
-        interactiveArea.style.display = 'none';
+        cardFrontP.textContent = 'Create a flashcard to start!'; // No KaTeX
+        interactiveArea.style.display = 'none'; // Hide whole area if no cards
         currentCardIndex = -1;
     } else {
-        interactiveArea.style.display = 'flex';
+        interactiveArea.style.display = 'flex'; // Show the area
         if (index < 0) index = 0;
         if (index >= flashcards.length) index = flashcards.length - 1;
 
         currentCardIndex = index;
         const card = flashcards[currentCardIndex];
 
-        // Render question using KaTeX
-        renderMath(card.question, cardFrontP, false); // Render inline
+        // Render using KaTeX
+        renderMath(card.question, cardFrontP);
+        renderMath(card.answers[card.correctAnswerIndex], cardBackP);
 
-        // Render correct answer using KaTeX
-        renderMath(card.answers[card.correctAnswerIndex], cardBackP, false); // Render inline
-
-        cardContainer.classList.remove('flipped');
+        cardContainer.classList.remove('flipped'); // Show front by default
     }
 
-    updateViewerButtonStates();
-    updateCardCounter();
-    updateStartQuizButtonState();
+    updateViewerButtonStates(); // Update nav buttons
+    updateCardCounter(); // Update card count display
+    updateStartQuizButtonState(); // Update quiz button state
 
+    // Control section visibility based on quiz state
     if (!isQuizActive) {
         flashcardSection.style.display = 'block';
         quizSection.style.display = 'none';
     }
 }
 
-// --- Update UI States (no changes needed for KaTeX here) ---
 function updateViewerButtonStates() {
     const hasCards = flashcards.length > 0;
     prevButton.disabled = !hasCards || currentCardIndex <= 0;
@@ -248,37 +203,73 @@ function updateCardCounter() {
      cardCounter.textContent = `Card ${flashcards.length === 0 ? 0 : currentCardIndex + 1} of ${flashcards.length}`;
 }
 
+// --- Add function to update Start Quiz button state ---
 function updateStartQuizButtonState() {
-    startQuizButton.disabled = flashcards.length === 0;
+    // Check if button exists before trying to disable/enable it
+    if (startQuizButton) {
+        startQuizButton.disabled = flashcards.length === 0;
+    } else {
+        console.warn("Start Quiz button not found in the DOM.");
+    }
 }
 
-// --- Flashcard Viewer Event Listeners (no changes needed) ---
-flipButton.addEventListener('click', () => { /* ... */ });
-cardContainer.addEventListener('click', (event) => { /* ... */ });
-nextButton.addEventListener('click', () => { /* ... */ });
-prevButton.addEventListener('click', () => { /* ... */ });
+// --- Flashcard Viewer Event Listeners ---
+flipButton.addEventListener('click', () => {
+    if (flashcards.length === 0 || isQuizActive) return; // Prevent flip during quiz
+    cardContainer.classList.toggle('flipped');
+});
+
+cardContainer.addEventListener('click', (event) => {
+    if (event.target.closest('#flashcard-controls') || flashcards.length === 0 || isQuizActive) return;
+    if (event.target === cardContainer || event.target.closest('#card-front') || event.target.closest('#card-back')) {
+       cardContainer.classList.toggle('flipped');
+    }
+});
+
+nextButton.addEventListener('click', () => {
+    if (currentCardIndex < flashcards.length - 1) {
+        // Use showCard to handle index update and rendering
+        showCard(currentCardIndex + 1);
+    }
+});
+
+prevButton.addEventListener('click', () => {
+    if (currentCardIndex > 0) {
+        // Use showCard to handle index update and rendering
+        showCard(currentCardIndex - 1);
+    }
+});
 
 // --- Quiz Logic ---
-startQuizButton.addEventListener('click', () => { /* ... */ });
+
+// --- Add listener for Start Quiz button ---
+if (startQuizButton) {
+    startQuizButton.addEventListener('click', () => {
+        if (flashcards.length > 0) {
+            startQuiz();
+        }
+    });
+}
 
 function startQuiz() {
-    if (flashcards.length === 0) return;
+    if (flashcards.length === 0) return; // Should be disabled, but double-check
     isQuizActive = true;
-    flashcardSection.style.display = 'none';
-    quizSection.style.display = 'block';
+    flashcardSection.style.display = 'none'; // Hide viewer
+    quizSection.style.display = 'block';     // Show quiz
     quizIndices = Array.from(flashcards.keys());
     shuffleArray(quizIndices);
-    correctlyAnsweredInQuiz = {};
+    correctlyAnsweredInQuiz = {}; // Reset progress
     currentQuizQuestionIndex = 0;
     displayQuizQuestion();
 }
 
+// --- Add function to hide quiz and return to viewer ---
 function hideQuiz() {
     isQuizActive = false;
     quizSection.style.display = 'none';
     flashcardSection.style.display = flashcards.length > 0 ? 'block' : 'none';
     if (cardContainer) cardContainer.classList.remove('flipped');
-    // Re-render the current card in the viewer when exiting quiz
+    // Re-render current card in viewer
     if (currentCardIndex !== -1) {
         showCard(currentCardIndex);
     }
@@ -291,23 +282,22 @@ function displayQuizQuestion() {
     quizFeedbackEl.textContent = '';
     quizFeedbackEl.className = '';
 
-
     if (!isQuizActive || !quizIndices || currentQuizQuestionIndex < 0) {
         hideQuiz(); return;
     }
 
     // --- End of Quiz ---
     if (currentQuizQuestionIndex >= quizIndices.length) {
-        quizQuestionEl.textContent = "Quiz Finished!"; // No KaTeX needed
+        quizQuestionEl.textContent = "Quiz Finished!";
         quizOptionsEl.innerHTML = `<p>You have completed all ${flashcards.length} questions.</p>`;
-        quizFeedbackEl.textContent = "You can review your cards or start the quiz again.";
+        quizFeedbackEl.textContent = "Review cards or start quiz again.";
         nextQuizButton.style.display = 'none';
         prevQuizButton.style.display = quizIndices.length > 1 ? 'inline-block' : 'none';
         // Add Back button
         const backButton = document.createElement('button');
         backButton.textContent = 'Back to Viewer';
         backButton.style.marginTop = '10px';
-        backButton.onclick = hideQuiz;
+        backButton.onclick = hideQuiz; // Use the hideQuiz function
         quizOptionsEl.appendChild(backButton);
         return;
     }
@@ -321,12 +311,12 @@ function displayQuizQuestion() {
 
     const card = flashcards[flashcardIndex];
 
-    // Render quiz question using KaTeX
-    renderMath(card.question, quizQuestionEl, false); // Render inline
+    // Render question using KaTeX into the <p> tag
+    renderMath(card.question, quizQuestionEl);
 
     // Prepare and shuffle answer options
     const answerOptions = card.answers.map((answer, index) => ({
-        text: answer, // Store raw LaTeX string
+        text: answer, // Raw LaTeX
         originalIndex: index
     }));
     shuffleArray(answerOptions);
@@ -337,27 +327,19 @@ function displayQuizQuestion() {
         button.classList.add('quiz-option-button');
         button.id = `quiz-option-${i}`;
         button.disabled = false;
-
-        // Render LaTeX inside the button using renderMathToString
-        const renderedHtml = renderMathToString(option.text, false); // Render inline
-        button.innerHTML = renderedHtml; // Set button content to rendered HTML
-
+        // Render LaTeX string into button's innerHTML
+        button.innerHTML = renderMathToString(option.text);
         button.addEventListener('click', () => handleAnswerSelection(
-            option.originalIndex,
-            card.correctAnswerIndex,
-            flashcardIndex,
-            button
+            option.originalIndex, card.correctAnswerIndex, flashcardIndex, button
         ));
         quizOptionsEl.appendChild(button);
     });
 
-    updateQuizButtonStates();
+    updateQuizButtonStates(); // Update nav buttons visibility
 }
 
 function handleAnswerSelection(selectedIndex, correctIndex, flashcardIndex, clickedButton) {
-    // ... (logic for checking correctness, setting feedback, disabling buttons) ...
-    // No changes needed here specifically for KaTeX rendering itself
-     const optionButtons = quizOptionsEl.querySelectorAll('.quiz-option-button');
+    const optionButtons = quizOptionsEl.querySelectorAll('.quiz-option-button');
     const isCorrect = selectedIndex === correctIndex;
 
     optionButtons.forEach(btn => {
@@ -371,36 +353,62 @@ function handleAnswerSelection(selectedIndex, correctIndex, flashcardIndex, clic
         optionButtons.forEach(button => button.disabled = true);
         clickedButton.classList.add('correct-answer-highlight');
     } else {
-        quizFeedbackEl.textContent = "Incorrect. Try again!";
+        quizFeedbackEl.textContent = "Incorrect. Please try again.";
         quizFeedbackEl.className = 'feedback-incorrect';
         clickedButton.disabled = true;
         clickedButton.classList.add('incorrect-answer-attempt');
     }
-    updateQuizButtonStates();
+    updateQuizButtonStates(); // Update nav buttons based on correctness
 }
 
-// --- Update Quiz Button States (no changes needed) ---
-function updateQuizButtonStates() { /* ... */ }
+function updateQuizButtonStates() {
+    if (!isQuizActive || !quizIndices || currentQuizQuestionIndex < 0 || currentQuizQuestionIndex >= quizIndices.length) {
+         nextQuizButton.style.display = 'none';
+         // Let end-of-quiz logic handle Prev button if finished
+         if (currentQuizQuestionIndex >= quizIndices.length) return;
+         // Hide Prev if state is invalid before finishing
+         prevQuizButton.style.display = 'none';
+        return;
+    }
 
-// --- Quiz Event Listeners (no changes needed) ---
-nextQuizButton.addEventListener('click', () => { /* ... */ });
-prevQuizButton.addEventListener('click', () => { /* ... */ });
+    const flashcardIndex = quizIndices[currentQuizQuestionIndex];
+    const isCurrentQuestionCorrect = correctlyAnsweredInQuiz[flashcardIndex];
+
+    prevQuizButton.style.display = currentQuizQuestionIndex > 0 ? 'inline-block' : 'none';
+    nextQuizButton.style.display = isCurrentQuestionCorrect ? 'inline-block' : 'none';
+}
+
+// --- Quiz Event Listeners ---
+nextQuizButton.addEventListener('click', () => {
+    // Proceed only if Next button is visible (current question is correct)
+    if (nextQuizButton.style.display !== 'none' && currentQuizQuestionIndex < quizIndices.length) {
+        currentQuizQuestionIndex++;
+        displayQuizQuestion();
+    }
+});
+
+prevQuizButton.addEventListener('click', () => {
+    if (prevQuizButton.style.display !== 'none' && currentQuizQuestionIndex > 0) {
+        currentQuizQuestionIndex--;
+        displayQuizQuestion(); // Re-display previous question
+    }
+});
 
 // --- Initial Application Setup ---
 function initializeApp() {
-    // Ensure KaTeX is loaded before trying to render
+    // Check if KaTeX is loaded
     if (typeof katex === 'undefined') {
-         console.warn("KaTeX not loaded yet, retrying initialization shortly...");
-         // Retry after a short delay. In a real app, you might use onload events.
-         setTimeout(initializeApp, 100);
+         console.warn("KaTeX not ready, retrying init...");
+         setTimeout(initializeApp, 100); // Simple retry mechanism
          return;
     }
-    console.log("KaTeX loaded, initializing app.");
-    loadFlashcards();
-    showCard(currentCardIndex); // First render happens here
-    hideQuiz();
-    updateStartQuizButtonState();
+    console.log("KaTeX ready. Initializing app.");
+    loadFlashcards();           // Load data first
+    showCard(currentCardIndex); // Display initial card/state (will also hide quiz initially)
+    // updateStartQuizButtonState(); // Called within showCard
+    // hideQuiz(); // Called within showCard based on isQuizActive flag
 }
 
-// Start the application
+// Run the initializer
 initializeApp();
+
