@@ -1,39 +1,53 @@
 <!DOCTYPE html>
-<html>
+<html lang="en"> <!-- Added lang attribute -->
 <head>
-    <meta charset="UTF-8"> <!-- Added charset for symbols -->
+    <meta charset="UTF-8">
     <title>Flashcard App</title>
+
+    <!-- KaTeX Library Files (Add these before your main CSS) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRMoG6BiSutd64rTQ12APNV9vNyc7SDh/LfgQv9ZCqjCPB4EVCS9G/LM" crossorigin="anonymous">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWjNMoOfpdAYCf/xLBzZFV5F68M576f82DCE3z/b4vH9VZVzXzc808p4f0cNI" crossorigin="anonymous"></script>
+    <!-- We are using manual rendering in main.js, so auto-render is not needed -->
+    <!-- <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gzz8NO+3+4CLTlK0Hdbb7T7L+jSD97JyA7E17v2Y58N22YJ1jNM+KC055GZJEp" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script> -->
+
+    <!-- Your Custom Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <h1>Create a Flashcard</h1>
+
+    <!-- Section for creating new flashcards -->
     <form id="flashcard-form">
-        <!-- Form content remains the same -->
         <div class="form-group">
             <label for="question">Question:</label>
-            <input type="text" id="question" name="question" required>
+            <!-- Input allows users to enter text, including LaTeX markup -->
+            <input type="text" id="question" name="question" required placeholder="Enter question (use LaTeX for math)">
         </div>
         <fieldset class="answers-group">
             <legend>Answers (Select the correct one):</legend>
+            <!-- Answer Option 1 -->
             <div class="form-group answer-item">
                 <input type="radio" id="correct_answer_1" name="correct_answer" value="1" required>
                 <label for="answer1">Answer 1:</label>
-                <input type="text" id="answer1" name="answer1" required>
+                <input type="text" id="answer1" name="answer1" required placeholder="Enter answer (use LaTeX for math)">
             </div>
+            <!-- Answer Option 2 -->
             <div class="form-group answer-item">
                 <input type="radio" id="correct_answer_2" name="correct_answer" value="2">
                 <label for="answer2">Answer 2:</label>
-                <input type="text" id="answer2" name="answer2" required>
+                <input type="text" id="answer2" name="answer2" required placeholder="Enter answer (use LaTeX for math)">
             </div>
+            <!-- Answer Option 3 -->
             <div class="form-group answer-item">
                 <input type="radio" id="correct_answer_3" name="correct_answer" value="3">
                 <label for="answer3">Answer 3:</label>
-                <input type="text" id="answer3" name="answer3" required>
+                <input type="text" id="answer3" name="answer3" required placeholder="Enter answer (use LaTeX for math)">
             </div>
+            <!-- Answer Option 4 -->
             <div class="form-group answer-item">
                 <input type="radio" id="correct_answer_4" name="correct_answer" value="4">
                 <label for="answer4">Answer 4:</label>
-                <input type="text" id="answer4" name="answer4" required>
+                <input type="text" id="answer4" name="answer4" required placeholder="Enter answer (use LaTeX for math)">
             </div>
         </fieldset>
         <button type="submit">Create Flashcard</button>
@@ -41,51 +55,59 @@
 
     <hr>
 
-    <!-- Wrapper for Flashcard and Quiz Side-by-side -->
-    <div id="interactive-area">
+    <!-- Wrapper for Flashcard Viewer and Quiz -->
+    <!-- Added ARIA attributes from previous version -->
+    <div id="interactive-area" style="display: none;"> <!-- Initially hidden by JS now -->
 
         <!-- Flashcard Viewer Section -->
-        <div id="flashcard-section">
-            <h2>Flashcards</h2>
+        <div id="flashcard-section" aria-labelledby="flashcard-heading">
+            <h2 id="flashcard-heading">Flashcards</h2>
             <div id="flashcard-container">
+                <!-- The actual flashcard -->
                 <div id="flashcard">
+                    <!-- Content will be rendered by KaTeX via JS -->
                     <div id="card-front">
-                        <p>Create a flashcard to start!</p>
+                        <p></p> <!-- Paragraph is still useful for structure -->
                     </div>
                     <div id="card-back">
-                        <p></p>
+                        <p></p> <!-- Paragraph is still useful for structure -->
                     </div>
                 </div>
+                <!-- Controls for navigating flashcards -->
                 <div id="flashcard-controls">
-                    <button id="prev-button" title="Previous Card" disabled>&#x25C0;</button> <!-- Left Arrow -->
+                    <button id="prev-button" title="Previous Card" disabled>◀</button>
                     <button id="flip-button" title="Flip Card" disabled>Flip</button>
-                    <button id="next-button" title="Next Card" disabled>&#x25B6;</button> <!-- Right Arrow -->
+                    <button id="next-button" title="Next Card" disabled>▶</button>
                 </div>
-                 <p id="card-counter">Card 0 of 0</p>
+                 <p id="card-counter" aria-live="polite">Card 0 of 0</p>
             </div>
+             <!-- Added Button to Start the Quiz -->
+            <button id="start-quiz-button" style="margin-top: 15px;" disabled>Start Quiz</button>
         </div>
 
-        <!-- Quiz Section -->
-        <div id="quiz-section" style="display: none;">
-            <h2>Quiz</h2>
-            <p id="quiz-question">Loading quiz question...</p>
+        <!-- Quiz Section (Initially Hidden) -->
+        <div id="quiz-section" style="display: none;" aria-labelledby="quiz-heading">
+            <h2 id="quiz-heading">Quiz</h2>
+            <!-- Question rendered by KaTeX via JS -->
+            <p id="quiz-question"></p>
+            <!-- Options will be dynamically added here, rendered by KaTeX via JS -->
             <div id="quiz-options">
-                <!-- Answer buttons will be generated by JS -->
+                <!-- Example: <button class="quiz-option">Rendered KaTeX</button> -->
             </div>
-            <p id="quiz-feedback"></p>
+            <!-- Feedback on the selected answer -->
+            <p id="quiz-feedback" aria-live="polite"></p>
+            <!-- Controls for navigating quiz questions -->
             <div id="quiz-controls">
-                 <button id="prev-quiz-button" title="Previous Question" style="display: none;">&#x25C0;</button> <!-- Left Arrow -->
-                 <button id="next-quiz-button" title="Next Question" style="display: none;">Next &#x25B6;</button> <!-- Right Arrow with Text -->
+                 <button id="prev-quiz-button" title="Previous Question" style="display: none;">◀</button>
+                 <button id="next-quiz-button" title="Next Question" style="display: none;">Next ▶</button>
             </div>
         </div>
         <!-- End Quiz Section -->
 
     </div> <!-- End Interactive Area -->
 
-
+    <!-- Link to YOUR JavaScript file (Must be AFTER KaTeX script) -->
     <script src="main.js"></script>
 </body>
 </html>
-
-
 
